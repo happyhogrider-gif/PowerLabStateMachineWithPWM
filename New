@@ -1,0 +1,798 @@
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;  // Create a Bluetooth Serial object
+
+enum LoadState { ALL_LOADS_ON, M1_90, M1_80, M1_70, M1_60, M1_50, M1_40, M1_30, M1_20, M1_10, M1_OFF,
+M2_90, M2_80, M2_70, M2_60, M2_50, M2_40, M2_30, M2_20, M2_10, M2_OFF, LEDS_1_OFF, LEDS_2_OFF, LEDS_3_OFF, LEDS_4_OFF}; // All states
+LoadState currentLoadState = LEDS_4_OFF; // Creating initial state for state machine
+const int Motor_1 = 2; // Factory Motor
+const int Motor_2 = 4; // Hospital Motor
+const int LEDS_1 = 5; // Factory LEDs
+const int LEDS_2 = 18; // Hospital LEDs
+const int LEDS_3 = 19; // Housing LEDs
+const int LEDS_4 = 21; // School LEDs
+
+float analogPinVoltage = 34; // Setting pin for analog read
+float readVoltage; // Setting voltage for value read
+float Voltage; // Actual voltage after conversion
+
+float analogPinCurrent = 35; // Setting pin for analog read
+float readCurrent; // Setting current for value read
+float Current; // Actual current after conversion
+
+int dutyCycle; // Duty cycle 0-255
+
+void setup() {
+  pinMode(Motor_1, OUTPUT); // Setting GPIO to digital output
+  pinMode(Motor_2, OUTPUT); // Setting GPIO to digital output
+  pinMode(LEDS_1, OUTPUT); // Setting GPIO to digital output
+  pinMode(LEDS_2, OUTPUT); // Setting GPIO to digital output
+  pinMode(LEDS_3, OUTPUT); // Setting GPIO to digital output
+  pinMode(LEDS_4, OUTPUT); // Setting GPIO to digital output
+
+  pinMode(analogPinVoltage, INPUT); // Setting GPIO to analog input
+  pinMode(analogPinCurrent, INPUT); // Setting GPIO to analog input
+
+  Serial.begin(115200);
+  
+  SerialBT.begin("ESP32_BT");  // Bluetooth device name
+  Serial.println("Bluetooth device started, pair to 'ESP32_BT'");
+
+}
+
+void loop() {
+  readVoltage = analogRead(analogPinVoltage); // Reading analog voltage
+  Voltage = readVoltage * (3.3 / 4095.0) * 6.35; // Converting read voltage to actual voltage
+
+  readCurrent = analogRead(analogPinCurrent); // Reading analog current
+  Current = readCurrent * (3.3 / 4095.0) / .08; // Converting read current to actual current
+
+  SerialBT.print("Voltage: "); // Sending over Bluetooth
+  SerialBT.println(Voltage); // Sending over Bluetooth
+
+  SerialBT.print("Current: "); // Sending over Bluetooth
+  SerialBT.println(Current); // Sending over Bluetooth
+  delay(50);
+
+  if (Voltage < 7.0) {
+    digitalWrite(Motor_1, LOW);
+    digitalWrite(Motor_2, LOW);
+    digitalWrite(LEDS_1, LOW);
+    digitalWrite(LEDS_2, LOW);
+    digitalWrite(LEDS_3, LOW);
+    digitalWrite(LEDS_4, LOW);
+
+    delay(3000);
+
+    currentLoadState = LEDS_4_OFF;
+    
+  }
+  switch (currentLoadState) {
+
+    case ALL_LOADS_ON:
+      SerialBT.println("ALL LOADS ON");
+      digitalWrite(Motor_1, HIGH);
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_90;
+      }
+
+    break;
+
+    case M1_90:
+      SerialBT.println("Motor 1 90% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 230;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_80;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 230);
+              delay(7000);
+              currentLoadState = M1_90;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = ALL_LOADS_ON;
+            }
+      }
+
+    break;
+
+    case M1_80:
+      SerialBT.println("Motor 1 80% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 204;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_70;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 230);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 204);
+              delay(7000);
+              currentLoadState = M1_80;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_90;
+            }
+      }
+    break;
+
+    case M1_70:
+      SerialBT.println("Motor 1 70% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 179;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_60;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 204);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 179);
+              delay(7000);
+              currentLoadState = M1_70;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_80;
+            }
+      }
+    break;
+
+    case M1_60:
+      SerialBT.println("Motor 1 60% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 153;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_50;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 179);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 153);
+              delay(7000);
+              currentLoadState = M1_60;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_70;
+            }
+      }
+    break;
+
+    case M1_50:
+      SerialBT.println("Motor 1 50% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 128;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_40;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 153);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 128);
+              delay(7000);
+              currentLoadState = M1_50;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_60;
+            }
+      }
+    break;
+
+    case M1_40:
+      SerialBT.println("Motor 1 40% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 102;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_30;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 128);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 102);
+              delay(7000);
+              currentLoadState = M1_40;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_50;
+            }
+      }
+    break;
+
+    case M1_30:
+      SerialBT.println("Motor 1 30% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 77;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_20;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 102);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 77);
+              delay(7000);
+              currentLoadState = M1_30;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_40;
+            }
+      }      
+    break;
+
+    case M1_20:
+      SerialBT.println("Motor 1 20% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 51;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M1_10;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 77);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 51);
+              delay(7000);
+              currentLoadState = M1_20;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_30;
+            }
+      }
+    break;
+
+    case M1_10:
+      SerialBT.println("Motor 1 10% PWM");
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 26;
+      digitalWrite(Motor_1, dutyCycle);
+
+      if (Voltage < 11.90) {
+            
+            currentLoadState = M1_OFF;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 51);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, 26);
+              delay(7000);
+              currentLoadState = M1_10;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_20;
+            }
+      }
+    break;
+
+    case M1_OFF:
+      SerialBT.println("Motor 1 OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, HIGH);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_90;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_1, 26);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_1, LOW);
+              delay(7000);
+              currentLoadState = M1_OFF;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_10;
+            }
+      }
+    break;
+
+    case M2_90:
+      SerialBT.println("Motor 1 OFF, Motor 2 90% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 230;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_80;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 230);
+              delay(7000);
+              currentLoadState = M2_90;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M1_OFF;
+            }
+      }
+    break;
+
+    case M2_80:
+      SerialBT.println("Motor 1 OFF, Motor 2 80% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 204;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_70;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 230);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 204);
+              delay(7000);
+              currentLoadState = M2_80;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_90;
+            }
+      }
+
+
+    break;
+
+    case M2_70:
+      SerialBT.println("Motor 1 OFF, Motor 2 70% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 179;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_60;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 204);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 179);
+              delay(7000);
+              currentLoadState = M2_70;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_80;
+            }
+      }
+    break;
+
+    case M2_60:
+      SerialBT.println("Motor 1 OFF, Motor 2 60% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 153;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_50;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 179);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 153);
+              delay(7000);
+              currentLoadState = M2_60;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_70;
+            }
+      }
+    break;
+
+    case M2_50:
+      SerialBT.println("Motor 1 OFF, Motor 2 50% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 128;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_40;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 153);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 128);
+              delay(7000);
+              currentLoadState = M2_50;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_60;
+            }
+      }
+    break;
+
+    case M2_40:
+      SerialBT.println("Motor 1 OFF, Motor 2 40% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 102;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_30;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 128);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 102);
+              delay(7000);
+              currentLoadState = M2_40;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_50;
+            }
+      }
+    break;
+
+    case M2_30:
+      SerialBT.println("Motor 1 OFF, Motor 2 30% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 77;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_20;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 102);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 77);
+              delay(7000);
+              currentLoadState = M2_30;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_40;
+            }
+      }
+    break;
+
+    case M2_20:
+      SerialBT.println("Motor 1 OFF, Motor 2 20% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 51;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_10;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 77);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 52);
+              delay(7000);
+              currentLoadState = M2_20;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_30;
+            }
+      }
+    break;
+
+    case M2_10:
+      SerialBT.println("Motor 1 OFF, Motor 2 10% PWM");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      dutyCycle = 26;
+      digitalWrite(Motor_2, dutyCycle);
+
+      if (Voltage < 11.90) {
+            currentLoadState = M2_OFF;
+            
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 52);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, 26);
+              delay(7000);
+              currentLoadState = M2_10;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = M2_20;
+            }
+      }
+    break;
+
+    case M2_OFF:
+      SerialBT.println("Motor 1 OFF, Motor 2 OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, LOW);
+      digitalWrite(LEDS_1, HIGH);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = LEDS_1_OFF;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(Motor_2, 26);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(Motor_2, LOW);
+              delay(7000);
+              currentLoadState = M2_OFF;
+            }
+            if (Voltage > 11.90) {
+              currentLoadState = M2_10;
+              delay(1000);
+            }
+      }
+
+    break;
+
+    case LEDS_1_OFF:
+      SerialBT.println("Motor 1 OFF, Motor 2 OFF, LEDs 1 OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, LOW);
+      digitalWrite(LEDS_1, LOW);
+      digitalWrite(LEDS_2, HIGH);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = LEDS_2_OFF;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(LEDS_1, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(LEDS_1, LOW);
+              delay(7000);
+              currentLoadState = LEDS_1_OFF;
+            }
+            if (Voltage > 11.90) {
+              currentLoadState = M2_OFF;
+              delay(1000);
+            }
+      }
+    break;
+
+    case LEDS_2_OFF:
+      SerialBT.println("Motor 1 OFF, Motor 2 OFF, LEDs 1 OFF, LEDs 2 OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, LOW);
+      digitalWrite(LEDS_1, LOW);
+      digitalWrite(LEDS_2, LOW);
+      digitalWrite(LEDS_3, HIGH);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = LEDS_3_OFF;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(LEDS_2, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(LEDS_2, LOW);
+              delay(7000);
+              currentLoadState = LEDS_2_OFF;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = LEDS_1_OFF;
+            }
+      }
+    break;
+
+    case LEDS_3_OFF:
+      SerialBT.println("Motor 1 OFF, Motor 2 OFF, LEDs 1 OFF, LEDs 2 OFF, LEDs 3 OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, LOW);
+      digitalWrite(LEDS_1, LOW);
+      digitalWrite(LEDS_2, LOW);
+      digitalWrite(LEDS_3, LOW);
+      digitalWrite(LEDS_4, HIGH);
+
+      if (Voltage < 11.90) {
+            currentLoadState = LEDS_4_OFF;
+      }
+
+      if (Voltage > 11.90) {
+            digitalWrite(LEDS_3, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(LEDS_3, LOW);
+              delay(7000);
+              currentLoadState = LEDS_3_OFF;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = LEDS_2_OFF;
+            }
+      }
+    break;
+
+    case LEDS_4_OFF:
+      SerialBT.println("ALL LOADS OFF");
+      digitalWrite(Motor_1, LOW);
+      digitalWrite(Motor_2, LOW);
+      digitalWrite(LEDS_1, LOW);
+      digitalWrite(LEDS_2, LOW);
+      digitalWrite(LEDS_3, LOW);
+      digitalWrite(LEDS_4, LOW);
+
+      if (Voltage > 11.90) {
+            digitalWrite(LEDS_4, HIGH);
+            delay(1000);
+            if (Voltage < 11.90) {
+              digitalWrite(LEDS_4, LOW);
+              delay(7000);
+              currentLoadState = LEDS_4_OFF;
+            }
+            if (Voltage > 11.90) {
+              delay(1000);
+              currentLoadState = LEDS_3_OFF;
+            }
+      }
+    break;
+  }
+
+}
